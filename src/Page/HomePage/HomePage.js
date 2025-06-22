@@ -1,4 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import Navbar from '../../Component/Navbar';
+import TransactionHistory from '../../Component/TransactionHistory';
+import InputForm from '../../Component/InputForm';
 
 const people = [
   {
@@ -63,6 +66,67 @@ const people = [
 
 export default function HomePage() {
   const [sortConfig, setSortConfig] = useState(null);
+  const [showPopup, setShowPopup] = useState(false);
+  const [showPopupInput, setShowPopupInput] = useState(false);
+  const [groupName, setGroupName] = useState("Nhóm PIONEER 1-1");
+  const [isEditing, setIsEditing] = useState(false);
+  const [showAddGroupPopup, setShowAddGroupPopup] = useState(false);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [availableUsers, setAvailableUsers] = useState([
+    { id: 4, name: "Sarah Connor", avatar: "https://i.pravatar.cc/150?img=4" },
+    { id: 5, name: "Mike Tyson", avatar: "https://i.pravatar.cc/150?img=5" },
+    { id: 6, name: "Emma Watson", avatar: "https://i.pravatar.cc/150?img=6" }
+  ]);
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const inputRef = useRef(null);
+
+  // Xử lý double click để chỉnh sửa tên nhóm
+  const handleDoubleClick = () => {
+    setIsEditing(true);
+  };
+
+  // Xử lý khi blur khỏi input
+  const handleBlur = () => {
+    setIsEditing(false);
+    // Có thể thêm logic lưu tên nhóm vào API ở đây
+  };
+
+  // Xử lý khi nhấn Enter
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      setIsEditing(false);
+    }
+  };
+
+  // Focus vào input khi bắt đầu chỉnh sửa
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isEditing]);
+
+  // Xử lý thêm nhóm mới
+  const handleAddGroup = () => {
+    console.log("Tạo nhóm mới:", {
+      name: newGroupName,
+      members: selectedUsers
+    });
+    // Reset form và đóng popup
+    setNewGroupName("");
+    setSelectedUsers([]);
+    setShowAddGroupPopup(false);
+    // Có thể thêm logic gọi API ở đây
+  };
+
+  // Xử lý chọn/bỏ chọn user
+  const toggleUserSelection = (user) => {
+    setSelectedUsers(prev => 
+      prev.some(u => u.id === user.id)
+        ? prev.filter(u => u.id !== user.id)
+        : [...prev, user]
+    );
+  };
+
 
   const handleSort = (key) => {
     let direction = 'asc';
@@ -88,47 +152,39 @@ export default function HomePage() {
   }, [people, sortConfig]);
   return (
     <div className="min-h-screen px-8 py-8 bg-gradient-to-br from-white via-blue-50 to-blue-100 font-sans text-sm text-gray-700">
-      <div className="flex items-center justify-between px-6 py-3 bg-transparent">
-        <div className="text-2xl font-bold text-black flex items-center">
-          <svg className="w-6 h-6 mr-2 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-          </svg>
-           COMPANY
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-[40px] shadow-sm">
-            <button className="px-4 py-2 text-sm font-medium text-white bg-black rounded-[40px] transition-all">
-              Giao dịch
-            </button>
-            <button className="px-4 py-2 text-sm font-medium text-gray-900 hover:bg-black hover:bg-opacity-10 rounded-[40px] transition-all">
-              Tạo mới bản ghi
-            </button>
-            <button className="px-4 py-2 text-sm font-medium text-gray-900 hover:bg-black hover:bg-opacity-10 rounded-[40px] transition-all">
-              Quản lý tài khoản
-            </button>
-          </div>
-          <button className="p-2 text-gray-700 hover:bg-black hover:bg-opacity-10 rounded-full transition-all">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-          </button>
-          <button className="p-2 text-gray-700 hover:bg-black hover:bg-opacity-10 rounded-full transition-all">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </button>
-          <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-black font-medium">
-            <span>JD</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Page title + filters */}
       <div className="px-8 py-4">
         <h1 className="text-4xl font-regular mb-4">Bảng tổng kết điểm</h1>
-        <h2 className="text-2xl font-bold mb-4">Nhóm PIONEER 1-1</h2>
+        <div className="flex items-center mb-4">
+        {isEditing ? (
+          <input
+            ref={inputRef}
+            type="text"
+            value={groupName}
+            onChange={(e) => setGroupName(e.target.value)}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            className="text-2xl font-bold focus:outline-none"
+          />
+        ) : (
+          <h2 
+            className="text-2xl font-bold cursor-pointer"
+            onDoubleClick={handleDoubleClick}
+          >
+            {groupName}
+          </h2>
+        )}
+         <button
+        onClick={() => setShowAddGroupPopup(true)}
+        className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+        title="Thêm nhóm mới"
+      >
+        <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+      </button>
+      </div>
+      
+
         <div className="flex items-center gap-3 mb-6 ">
           <span className="text-sm font-medium text-gray-600">Chốt từ</span>
           <div className="flex gap-2">
@@ -215,7 +271,7 @@ export default function HomePage() {
             <span className="text-xs text-gray-600">mục/trang</span>
           </div>
           <input className="flex-1 px-4 py-1 border rounded-full shadow-sm text-sm" placeholder="Search..." />
-          <button className="bg-blue-400 px-4 py-1 rounded-full text-xs text-white shadow">+ Add</button>
+          <button onClick={() => setShowPopupInput(true)} className="bg-blue-400 px-4 py-1 rounded-full text-xs text-white shadow">+ Add</button>
           <button className="bg-white border px-4 py-1 rounded-full text-xs shadow">Export</button>
         </div>
 
@@ -258,10 +314,11 @@ export default function HomePage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {people.map((person, idx) => (
                 <tr
+                  onClick={() => setShowPopup(true)}
                   key={idx}
                   className={`transition-colors duration-150 ${person.selected
-                      ? 'bg-gray-50 hover:bg-gray-100'
-                      : 'hover:bg-blue-50'
+                    ? 'bg-gray-50 hover:bg-gray-100'
+                    : 'hover:bg-blue-50'
                     }`}
                 >
                   <td className="px-4 py-3 whitespace-nowrap">
@@ -282,64 +339,130 @@ export default function HomePage() {
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                     {person.salary}
                   </td>
-                  {/* <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${person.status === 'Absent'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-green-100 text-green-800'
-                      }`}>
-                      {person.status}
-                    </span>
-                  </td> */}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
-          {/* Hiển thị thông tin */}
           <div className="text-sm text-gray-600">
             Hiển thị từ <span className="font-medium">1</span> tới <span className="font-medium">10</span> của <span className="font-medium">100</span> dữ liệu
           </div>
-
-          {/* Phân trang */}
           <div className="flex space-x-1">
-  {/* Nút lùi */}
-  <button className="px-3 py-1 border rounded-md text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50" disabled>
-    &lt;
-  </button>
-
-  {/* Trang đầu */}
-  {[1, 2, 3].map((page) => (
-    <button
-      key={page}
-      className={`w-10 h-8 rounded-md text-sm ${
-        page === 1 ? 'bg-blue-400 text-white' : 'text-gray-600 hover:bg-gray-100'
-      }`}
-    >
-      {page}
-    </button>
-  ))}
-
-  {/* Dấu ... */}
-  <span className="w-10 h-8 flex items-center justify-center text-gray-400">...</span>
-
-  {/* Trang cuối */}
-  {[14, 15, 16].map((page) => (
-    <button
-      key={page}
-      className="w-10 h-8 rounded-md text-sm text-gray-600 hover:bg-gray-100"
-    >
-      {page}
-    </button>
-  ))}
-
-  {/* Nút tiến */}
-  <button className="px-3 py-1 border rounded-md text-sm text-gray-600 hover:bg-gray-50">
-    &gt;
-  </button>
-</div>
+            <button className="px-3 py-1 border rounded-md text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50" disabled>
+              &lt;
+            </button>
+            {[1, 2, 3].map((page) => (
+              <button
+                key={page}
+                className={`w-10 h-8 rounded-md text-sm ${page === 1 ? 'bg-blue-400 text-white' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+              >
+                {page}
+              </button>
+            ))}
+            <span className="w-10 h-8 flex items-center justify-center text-gray-400">...</span>
+            {[14, 15, 16].map((page) => (
+              <button
+                key={page}
+                className="w-10 h-8 rounded-md text-sm text-gray-600 hover:bg-gray-100"
+              >
+                {page}
+              </button>
+            ))}
+            <button className="px-3 py-1 border rounded-md text-sm text-gray-600 hover:bg-gray-50">
+              &gt;
+            </button>
+          </div>
         </div>
       </div>
+       {showPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50">
+          <div className="bg-white p-4 rounded shadow-lg relative">
+            <button
+              onClick={() => setShowPopup(false)}
+              className="absolute w-6 h-6 top-2 right-2 text-gray-500 hover:text-gray-700"
+            >
+              &times;
+            </button>
+            <TransactionHistory />
+          </div>
+        </div>
+      )}
+      {showPopupInput && (
+        <div className="fixed inset-0 bg-gradient-to-br from-white via-blue-50 to-blue-100 bg-opacity-10 flex justify-center items-center z-50">
+          <div className="">
+            <button
+              onClick={() => setShowPopupInput(false)}
+              className="absolute w-6 h-6 top-2 right-2 text-gray-500 hover:text-gray-700"
+            >
+              &times;
+            </button>
+            <InputForm />
+          </div>
+        </div>
+      )}
+       {showAddGroupPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold mb-4">Tạo nhóm mới</h3>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tên nhóm</label>
+              <input
+                type="text"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Nhập tên nhóm"
+              />
+            </div>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Thành viên</label>
+              <div className="border border-gray-300 rounded-md p-2 max-h-60 overflow-y-auto">
+                {availableUsers.map(user => (
+                  <div 
+                    key={user.id} 
+                    className={`flex items-center p-2 rounded cursor-pointer ${selectedUsers.some(u => u.id === user.id) ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                    onClick={() => toggleUserSelection(user)}
+                  >
+                    <img
+                      src={user.avatar}
+                      alt={user.name}
+                      className="w-8 h-8 rounded-full object-cover border border-gray-200 mr-3"
+                    />
+                    <span className="text-sm font-medium">
+                      {user.name}
+                    </span>
+                    {selectedUsers.some(u => u.id === user.id) && (
+                      <svg className="w-5 h-5 ml-auto text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3">
+              <button 
+                onClick={() => setShowAddGroupPopup(false)}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Hủy
+              </button>
+              <button 
+                onClick={handleAddGroup}
+                disabled={!newGroupName.trim()}
+                className={`px-4 py-2 rounded-md text-white ${!newGroupName.trim() ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+              >
+                Tạo nhóm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
