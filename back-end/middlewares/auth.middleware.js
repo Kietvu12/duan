@@ -1,4 +1,5 @@
 const { verifyToken } = require('../config/jwt');
+const db = require('../config/db');
 
 const authenticate = async (req, res, next) => {
   try {
@@ -10,14 +11,33 @@ const authenticate = async (req, res, next) => {
     }
 
     const decoded = verifyToken(token);
-    req.user = decoded;
+    
+    // Kiểm tra user có tồn tại trong DB không
+    const [users] = await db.query('SELECT * FROM users WHERE user_id = ?', [decoded.user_id]);
+    if (!users || users.length === 0) {
+      return res.status(401).json({ error: 'Người dùng không tồn tại' });
+    }
+
+    // Gán thông tin user vào request
+    req.user = users[0];
     
     next();
   } catch (error) {
-    return res.status(401).json({ error: error.message });
+    console.error('Authentication error:', error);
+    return res.status(401).json({ error: 'Xác thực thất bại' });
   }
 };
 
+const authorize = (roles = []) => {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Không có quyền truy cập' });
+    }
+    next();
+  };
+};
+
 module.exports = {
-  authenticate
+  authenticate,
+  authorize
 };

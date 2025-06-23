@@ -6,10 +6,10 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const sequelize = require('./config/db');
 const authRoutes = require('./routes/auth.route');
+const groupRoutes = require('./routes/group.route')
 
 const app = express();
 
-// 1. Cấu hình CORS chi tiết
 app.use(cors({
   origin: 'http://localhost:3000',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -17,18 +17,15 @@ app.use(cors({
   credentials: true
 }));
 
-// 2. Middleware bảo mật
 app.use(helmet());
 app.use(bodyParser.json({ limit: '10kb' }));
 
-// 3. Giới hạn request rate
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 phút
-  max: 100 // giới hạn mỗi IP 100 requests
+  windowMs: 15 * 60 * 1000, 
+  max: 100 
 });
 app.use('/api/', limiter);
 
-// 4. Kết nối database
 async function initializeDatabase() {
   try {
     await sequelize.authenticate();
@@ -40,19 +37,17 @@ async function initializeDatabase() {
     }
   } catch (error) {
     console.error('❌ Lỗi database:', error);
-    process.exit(1); // Thoát nếu không kết nối được database
+    process.exit(1); 
   }
 }
 
-// 5. Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/group', groupRoutes);
 
-// 6. Route kiểm tra sức khỏe
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'healthy' });
 });
 
-// 7. Xử lý lỗi tập trung
 app.use((err, req, res, next) => {
   console.error('🔥 Lỗi:', err.stack);
   
@@ -66,7 +61,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 8. Khởi động server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, async () => {
   await initializeDatabase();
@@ -74,7 +68,6 @@ app.listen(PORT, async () => {
   console.log(`🔗 Truy cập: http://localhost:${PORT}`);
 });
 
-// 9. Xử lý tắt server
 process.on('SIGTERM', () => {
   console.log('🛑 Tắt server...');
   server.close(() => {
