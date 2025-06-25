@@ -11,7 +11,7 @@ const Transaction = sequelize.define('Transaction', {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'Users',
+      model: 'users',
       key: 'user_id'
     }
   },
@@ -19,7 +19,7 @@ const Transaction = sequelize.define('Transaction', {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'Groups',
+      model: 'groups',
       key: 'group_id'
     }
   },
@@ -33,14 +33,14 @@ const Transaction = sequelize.define('Transaction', {
     allowNull: false
   },
   transaction_type: {
-    type: DataTypes.ENUM('nhan_san', 'san_cho', 'nhan_lich', 'giao_lich'),
+    type: DataTypes.ENUM('nhan_san','san_cho','nhan_lich','giao_lich'),
     allowNull: false
   },
   related_user_id: {
     type: DataTypes.INTEGER,
     allowNull: true,
     references: {
-      model: 'Users',
+      model: 'users',
       key: 'user_id'
     }
   },
@@ -55,7 +55,7 @@ const Transaction = sequelize.define('Transaction', {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'Users',
+      model: 'users',
       key: 'user_id'
     }
   }

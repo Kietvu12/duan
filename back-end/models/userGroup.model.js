@@ -11,7 +11,7 @@ const UserGroup = sequelize.define('UserGroup', {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'Users',
+      model: 'users',
       key: 'user_id'
     }
   },
@@ -19,7 +19,7 @@ const UserGroup = sequelize.define('UserGroup', {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'Groups',
+      model: 'groups',
       key: 'group_id'
     }
   },

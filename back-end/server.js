@@ -7,9 +7,11 @@ const rateLimit = require('express-rate-limit');
 const sequelize = require('./config/db');
 const authRoutes = require('./routes/auth.route');
 const groupRoutes = require('./routes/group.route')
-
+const transactionRoutes = require('./routes/transaction.route');
+const userRoutes = require('./routes/user.route');
 const app = express();
-
+const setupAssociations = require('./models/association');
+setupAssociations()
 app.use(cors({
   origin: 'http://localhost:3000',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -43,6 +45,8 @@ async function initializeDatabase() {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/groups', groupRoutes);
+app.use('/api/transactions', transactionRoutes);
+app.use('/api/users', userRoutes);
 
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'healthy' });

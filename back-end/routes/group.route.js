@@ -1,12 +1,26 @@
 const express = require('express');
 const router = express.Router();
 const GroupController = require('../controllers/group.controller');
-const { authenticate } = require('../middlewares/auth.middleware');
+const { authenticate, authorize } = require('../middlewares/auth.middleware');
+const checkGroupPermission = require('../middlewares/group.middleware');
 
-// Lấy danh sách nhóm (system_admin only)
-router.get('/list', authenticate, GroupController.getAllGroups);
+// Tạo nhóm - chỉ system_admin
+router.post('/', 
+  authenticate, 
+  authorize(['system_admin']), 
+  GroupController.createGroup
+);
 
-// Lấy thành viên và giao dịch trong nhóm (system_admin hoặc group_admin của nhóm đó)
-router.get('/:groupId/members-transactions', authenticate, GroupController.getGroupMembersWithTransactions);
+router.post('/:groupId/members',
+  authenticate,
+  checkGroupPermission('manage_members'),
+  GroupController.addMember
+);
+
+router.get('/:groupId',
+  authenticate,
+  checkGroupPermission('view_transactions'),
+  GroupController.getGroupDetails
+);
 
 module.exports = router;

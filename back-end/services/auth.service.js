@@ -37,7 +37,6 @@ class AuthService {
       token
     };
   }
-
   static async getProfile(userId) {
     const user = await User.findByPk(userId, {
       attributes: { exclude: ['password_hash'] }
@@ -48,20 +47,15 @@ class AuthService {
     return user;
   }
   static async updateProfile(userId, updateData) {
-  // Loại bỏ các trường không được phép cập nhật
   const { password_hash, role, user_id, ...allowedUpdates } = updateData;
-  
   const [affectedRows] = await User.update(allowedUpdates, {
     where: { user_id: userId }
   });
-  
   if (affectedRows === 0) {
     throw new Error('Cập nhật thông tin thất bại');
   }
-  
   return await this.getProfile(userId);
 }
-
 static async changePassword(userId, currentPassword, newPassword) {
   const user = await User.findByPk(userId);
   if (!user) {
