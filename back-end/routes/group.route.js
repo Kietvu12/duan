@@ -23,4 +23,10 @@ router.get('/:groupId',
   GroupController.getGroupDetails
 );
 
+router.get(
+  '/',
+  authenticate,
+  GroupController.getAllGroups
+);
+
 module.exports = router;

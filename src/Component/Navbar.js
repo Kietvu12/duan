@@ -5,19 +5,14 @@ import { useProject } from '../Context/ProjectContext';
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useProject(); // Lấy thông tin user từ context
-
-  // Kiểm tra route hiện tại
+  const { user } = useProject(); 
   const isActive = (path) => {
     return location.pathname === path;
   };
-
-  // Lấy chữ cái đầu tiên từ tên người dùng
   const getInitial = () => {
-    if (!user?.name) return 'U'; // Mặc định nếu không có tên
+    if (!user?.name) return 'U'; 
     return user.name.charAt(0).toUpperCase();
   };
-
   // Kiểm tra nếu user có quyền admin
   const isAdmin = user?.role !== 'user';
 

@@ -64,6 +64,32 @@ class GroupService {
 
     return { group, members };
   }
+static async getAllGroups(requesterId, requesterRole) {
+  // Tạo options cơ bản
+  const options = {
+    include: [
+      {
+        model: User,
+        as: 'creator',
+        attributes: ['user_id', 'username', 'email']
+      }
+    ],
+    order: [['created_at', 'DESC']]
+  };
+
+  // Nếu không phải system_admin, thêm điều kiện where
+  if (requesterRole !== 'system_admin') {
+    options.include.push({
+      model: UserGroup,
+      as: 'userGroupRelations',
+      where: { user_id: requesterId },
+      attributes: [], // Không lấy thông tin từ bảng user_groups
+      required: true // Bắt buộc phải có trong nhóm
+    });
+  }
+
+  return await Group.findAll(options);
+}
 }
 
 module.exports = GroupService;

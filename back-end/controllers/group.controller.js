@@ -41,6 +41,20 @@ class GroupController {
       res.status(404).json({ error: error.message });
     }
   }
+static async getAllGroups(req, res) {
+  try {
+    const groups = await GroupService.getAllGroups(
+      req.user.user_id,
+      req.user.role
+    );
+    res.json(groups);
+  } catch (error) {
+    res.status(500).json({ 
+      error: 'Lỗi khi lấy danh sách nhóm',
+      details: error.message 
+    });
+  }
+}
 }
 
 module.exports = GroupController;

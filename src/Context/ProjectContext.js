@@ -86,7 +86,7 @@ export const ProjectProvider = ({ children }) => {
     setUser(null);
     setAuthChecked(true);
   };
-
+  
   return (
     <ProjectContext.Provider value={{
       user,
