@@ -17,6 +17,8 @@ class GroupService {
     if (!group || group.length === 0) {
       throw new Error('Group not found');
     }
+    console.log("service:", groupId);
+    
 
     // Kiểm tra quyền truy cập
     if (userRole !== 'system_admin') {
@@ -29,7 +31,6 @@ class GroupService {
       }
     }
 
-    // Lấy thành viên
     const [members] = await db.query(`
       SELECT u.user_id, u.username, u.zalo_name, u.email, u.role, u.points, u.balance,
              ug.is_group_admin, ug.joined_at

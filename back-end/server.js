@@ -32,7 +32,7 @@ async function initializeDatabase() {
     console.log('✅ Kết nối database thành công');
     
     if (process.env.NODE_ENV !== 'production') {
-      await sequelize.sync({ alter: true });
+      await sequelize.sync();
       console.log('🔄 Database đã đồng bộ (alter)');
     }
   } catch (error) {
@@ -42,7 +42,7 @@ async function initializeDatabase() {
 }
 
 app.use('/api/auth', authRoutes);
-app.use('/api/group', groupRoutes);
+app.use('/api/groups', groupRoutes);
 
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'healthy' });

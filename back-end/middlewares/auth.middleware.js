@@ -1,26 +1,31 @@
 const { verifyToken } = require('../config/jwt');
 const db = require('../config/db');
+const User = require('../models/user.model');
 
 const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
+    console.log(token);
     
     if (!token) {
       return res.status(401).json({ error: 'Token không được cung cấp' });
     }
-
     const decoded = verifyToken(token);
+    console.log(decoded);
     
-    // Kiểm tra user có tồn tại trong DB không
-    const [users] = await db.query('SELECT * FROM users WHERE user_id = ?', [decoded.user_id]);
-    if (!users || users.length === 0) {
+    // Sử dụng Sequelize model thay vì raw query
+    const user = await User.findByPk(decoded.user_id, {
+      attributes: { exclude: ['password_hash'] }
+    });
+    console.log(user);
+    
+    
+    if (!user) {
       return res.status(401).json({ error: 'Người dùng không tồn tại' });
     }
 
-    // Gán thông tin user vào request
-    req.user = users[0];
-    
+    req.user = user.get({ plain: true });
     next();
   } catch (error) {
     console.error('Authentication error:', error);
