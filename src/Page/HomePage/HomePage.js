@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Navbar from '../../Component/Navbar';
 import TransactionHistory from '../../Component/TransactionHistory';
-import InputForm from '../../Component/InputForm';
+import InputForm from '../../Component/InputForm';import { useProject } from '../../Context/ProjectContext';
 
 const people = [
   {
@@ -65,6 +65,10 @@ const people = [
 ];
 
 export default function HomePage() {
+ const { groupList, groupsLoading, user } = useProject();
+ console.log(groupList);
+ 
+  
   const [sortConfig, setSortConfig] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
   const [showPopupInput, setShowPopupInput] = useState(false);

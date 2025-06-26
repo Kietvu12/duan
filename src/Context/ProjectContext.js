@@ -1,5 +1,4 @@
-// contexts/ProjectContext.js
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
 const ProjectContext = createContext();
@@ -9,8 +8,25 @@ export const ProjectProvider = ({ children }) => {
     const savedUser = localStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
+  const [groupList, setGroupList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+
+  // Thêm hàm kiểm tra auth khi khởi động app
+  useEffect(() => {
+    const checkAuth = async () => {
+      await fetchUserProfile();
+    };
+    checkAuth();
+  }, []);
+
+  // Tự động lấy danh sách nhóm khi user thay đổi
+  useEffect(() => {
+    if (user) {
+      getAllGroup();
+    }
+  }, [user]);
 
   const login = async (email, password) => {
     setLoading(true);
@@ -19,19 +35,41 @@ export const ProjectProvider = ({ children }) => {
         email,
         password
       });
-      
+
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
       setUser(response.data.user);
-      setAuthChecked(true);
       return { success: true };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error.response?.data?.error || 'Đăng nhập thất bại' 
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Đăng nhập thất bại'
       };
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getAllGroup = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    setGroupsLoading(true);
+    try {
+      const response = await axios.get('http://localhost:5000/api/groups', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      setGroupList(response.data);
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách nhóm:', error);
+      // Xử lý khi token hết hạn
+      if (error.response?.status === 401) {
+        logout();
+      }
+    } finally {
+      setGroupsLoading(false);
     }
   };
 
@@ -61,21 +99,24 @@ export const ProjectProvider = ({ children }) => {
 
   const fetchUserProfile = async () => {
     const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const response = await axios.get('http://localhost:5000/api/auth/profile', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        localStorage.setItem('user', JSON.stringify(response.data));
-        setUser(response.data);
-      } catch (error) {
+    if (!token) {
+      setAuthChecked(true);
+      return;
+    }
+
+    try {
+      const response = await axios.get('http://localhost:5000/api/auth/profile', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      localStorage.setItem('user', JSON.stringify(response.data));
+      setUser(response.data);
+    } catch (error) {
+      if (error.response?.status === 401) {
         logout();
-      } finally {
-        setAuthChecked(true);
       }
-    } else {
+    } finally {
       setAuthChecked(true);
     }
   };
@@ -84,19 +125,24 @@ export const ProjectProvider = ({ children }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
-    setAuthChecked(true);
+    setGroupList([]);
   };
-  
+
   return (
-    <ProjectContext.Provider value={{
-      user,
-      loading,
-      authChecked,
-      login,
-      changePassword,
-      fetchUserProfile,
-      logout
-    }}>
+    <ProjectContext.Provider
+      value={{
+        user,
+        loading,
+        authChecked,
+        groupList,
+        groupsLoading,
+        login,
+        changePassword,
+        fetchUserProfile,
+        logout,
+        getAllGroup
+      }}
+    >
       {children}
     </ProjectContext.Provider>
   );
