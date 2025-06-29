@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Navbar from '../../Component/Navbar';
 import TransactionHistory from '../../Component/TransactionHistory';
-import InputForm from '../../Component/InputForm';import { useProject } from '../../Context/ProjectContext';
+import InputForm from '../../Component/InputForm';
+import { useProject } from '../../Context/ProjectContext';
 
 const people = [
   {
@@ -16,178 +17,262 @@ const people = [
     avatar: "https://i.pravatar.cc/150?img=1",
     selected: true
   },
-  {
-    name: "Ksenia Bair",
-    job: "Fullstack Engineer",
-    department: "Engineering",
-    site: "Miami",
-    salary: "$1,500",
-    startDate: "Oct 13, 2023",
-    lifecycle: "-1.5",
-    status: "Absent",
-    avatar: "https://i.pravatar.cc/150?img=1",
-    selected: true
-  }, {
-    name: "Ksenia Bair",
-    job: "Fullstack Engineer",
-    department: "Engineering",
-    site: "Miami",
-    salary: "$1,500",
-    startDate: "Oct 13, 2023",
-    lifecycle: "+0.6",
-    status: "Absent",
-    avatar: "https://i.pravatar.cc/150?img=1",
-    selected: true
-  }, {
-    name: "Ksenia Bair",
-    job: "Fullstack Engineer",
-    department: "Engineering",
-    site: "Miami",
-    salary: "$1,500",
-    startDate: "Oct 13, 2023",
-    lifecycle: "-0.75",
-    status: "Absent",
-    avatar: "https://i.pravatar.cc/150?img=1",
-    selected: true
-  }, {
-    name: "Ksenia Bair",
-    job: "Fullstack Engineer",
-    department: "Engineering",
-    site: "Miami",
-    salary: "$1,500",
-    startDate: "Oct 13, 2023",
-    lifecycle: "+0.5",
-    status: "Absent",
-    avatar: "https://i.pravatar.cc/150?img=1",
-    selected: true
-  },
-  // Thêm các dòng dữ liệu khác tương tự...
 ];
 
 export default function HomePage() {
- const { groupList, groupsLoading, user } = useProject();
- console.log(groupList);
- 
-  
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const { getAllGroups, getTransactionsByGroup, getAllUsers } = useProject();
+  const [groupList, setGroupList] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+  const [currentGroup, setCurrentGroup] = useState(null);
+  const [filteredGroups, setFilteredGroups] = useState([]);
   const [sortConfig, setSortConfig] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
   const [showPopupInput, setShowPopupInput] = useState(false);
-  const [groupName, setGroupName] = useState("Nhóm PIONEER 1-1");
   const [isEditing, setIsEditing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [showAddGroupPopup, setShowAddGroupPopup] = useState(false);
-  const [newGroupName, setNewGroupName] = useState("");
+  const [newGroupName, setNewGroupName] = useState('');
   const [availableUsers, setAvailableUsers] = useState([
-    { id: 4, name: "Sarah Connor", avatar: "https://i.pravatar.cc/150?img=4" },
-    { id: 5, name: "Mike Tyson", avatar: "https://i.pravatar.cc/150?img=5" },
-    { id: 6, name: "Emma Watson", avatar: "https://i.pravatar.cc/150?img=6" }
+    { id: 4, name: 'Sarah Connor', avatar: 'https://i.pravatar.cc/150?img=4' },
+    { id: 5, name: 'Mike Tyson', avatar: 'https://i.pravatar.cc/150?img=5' },
+    { id: 6, name: 'Emma Watson', avatar: 'https://i.pravatar.cc/150?img=6' },
   ]);
   const [selectedUsers, setSelectedUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const inputRef = useRef(null);
+  // Sửa lại các useEffect quan trọng
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        setLoading(true);
+        const [users, groups] = await Promise.all([getAllUsers(), getAllGroups()]);
 
-  // Xử lý double click để chỉnh sửa tên nhóm
-  const handleDoubleClick = () => {
-    setIsEditing(true);
-  };
+        setAllUsers(users);
+        setGroupList(groups);
 
-  // Xử lý khi blur khỏi input
-  const handleBlur = () => {
-    setIsEditing(false);
-    // Có thể thêm logic lưu tên nhóm vào API ở đây
-  };
+        // Chỉ set currentGroup nếu chưa có giá trị
+        setCurrentGroup(prev => prev || (groups.length > 0 ? groups[0] : null));
+      } catch (error) {
+        console.error('Error fetching initial data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInitialData();
+  }, [getAllUsers, getAllGroups]);
+  console.log("tất cả:", allUsers);
 
-  // Xử lý khi nhấn Enter
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      setIsEditing(false);
-    }
-  };
 
-  // Focus vào input khi bắt đầu chỉnh sửa
+  // Thêm biến kiểm soát tránh gọi API liên tục
+  const [lastFetchedGroup, setLastFetchedGroup] = useState(null);
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      if (!currentGroup) return;
+
+      try {
+        setLoading(true);
+        const transactionsData = await getTransactionsByGroup(currentGroup.group_id);
+        setTransactions(transactionsData);
+      } catch (error) {
+        console.error('Error fetching transactions:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTransactions();
+  }, [currentGroup, getTransactionsByGroup]);
+
+  useEffect(() => {
+    setFilteredGroups(
+      searchQuery.trim() === ''
+        ? []
+        : groupList.filter(group =>
+          group.group_name.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+    );
+  }, [searchQuery, groupList]);
+
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
     }
   }, [isEditing]);
 
-  // Xử lý thêm nhóm mới
-  const handleAddGroup = () => {
-    console.log("Tạo nhóm mới:", {
-      name: newGroupName,
-      members: selectedUsers
-    });
-    // Reset form và đóng popup
-    setNewGroupName("");
-    setSelectedUsers([]);
-    setShowAddGroupPopup(false);
-    // Có thể thêm logic gọi API ở đây
-  };
+  const handleGroupSelect = useCallback(group => {
+    setCurrentGroup(group);
+    setIsEditing(false);
+    setSearchQuery('');
+    setLastFetchedGroup(null);
+  }, []);
 
-  // Xử lý chọn/bỏ chọn user
-  const toggleUserSelection = (user) => {
-    setSelectedUsers(prev => 
+  const handleSort = useCallback(key => {
+    setSortConfig(prev => {
+      const direction = prev?.key === key && prev.direction === 'asc' ? 'desc' : 'asc';
+      return { key, direction };
+    });
+  }, []);
+
+  const toggleUserSelection = useCallback(user => {
+    setSelectedUsers(prev =>
       prev.some(u => u.id === user.id)
         ? prev.filter(u => u.id !== user.id)
         : [...prev, user]
     );
-  };
+  }, []);
 
-
-  const handleSort = (key) => {
-    let direction = 'asc';
-    if (sortConfig && sortConfig.key === key) {
-      direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  // Sắp xếp dữ liệu
-  const sortedPeople = useMemo(() => {
-    if (!sortConfig) return people;
-
-    return [...people].sort((a, b) => {
-      if (a[sortConfig.key] < b[sortConfig.key]) {
-        return sortConfig.direction === 'asc' ? -1 : 1;
+  const memberStats = useMemo(() => {
+    const stats = {};
+    transactions.forEach(transaction => {
+      const userId = transaction.user_id;
+      if (!stats[userId]) {
+        const user = allUsers.find(u => u.user_id === userId) || {
+          user_id: userId,
+          zalo_name: `User ${userId}`,
+          // Nếu API không trả về avatar, có thể dùng zalo_name hoặc user_id để tạo avatar mặc định
+        };
+        stats[userId] = {
+          userId,
+          zalo_name: user.zalo_name || `User ${userId}`,
+          avatar: user.avatar || `https://i.pravatar.cc/150?u=${userId}`, // Sửa lại cách tạo avatar mặc định
+          totalPoints: 0,
+          totalAmount: 0,
+          transactions: 0,
+        };
       }
-      if (a[sortConfig.key] > b[sortConfig.key]) {
-        return sortConfig.direction === 'asc' ? 1 : -1;
+      stats[userId].totalPoints += transaction.points_change || 0;
+      stats[userId].totalAmount += parseFloat(transaction.amount) || 0;
+      stats[userId].transactions += 1;
+
+      if (transaction.related_user_id) {
+        const relatedUserId = transaction.related_user_id;
+        if (!stats[relatedUserId]) {
+          const relatedUser = allUsers.find(u => u.user_id === relatedUserId) || {
+            user_id: relatedUserId,
+            zalo_name: `User ${relatedUserId}`,
+          };
+          stats[relatedUserId] = {
+            userId: relatedUserId,
+            zalo_name: relatedUser.zalo_name || `User ${relatedUserId}`,
+            avatar: relatedUser.avatar || `https://i.pravatar.cc/150?u=${relatedUserId}`,
+            totalPoints: 0,
+            totalAmount: 0,
+            transactions: 0,
+          };
+        }
       }
+    });
+    return Object.values(stats);
+  }, [transactions, allUsers]);
+
+  const sortedData = useMemo(() => {
+    if (!sortConfig) return memberStats;
+    return [...memberStats].sort((a, b) => {
+      const keyMap = {
+        'Tên Zalo': 'zalo_name', // Sửa thành 'zalo_name'
+        'Điểm': 'totalPoints',
+        '$$': 'totalAmount',
+        GD: 'transactions',
+      };
+      const key = keyMap[sortConfig.key] || 'zalo_name'; // Mặc định sort theo zalo_name
+      if (a[key] < b[key]) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (a[key] > b[key]) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [people, sortConfig]);
+  }, [memberStats, sortConfig]);
+  console.log("dữ liệu:", memberStats)
+  const handleDoubleClick = () => {
+    setIsEditing(true);
+    setSearchQuery('');
+  };
+
+  const handleBlur = () => {
+    setTimeout(() => {
+      setIsEditing(false);
+      setSearchQuery('');
+    }, 200);
+  };
+
+  const handleKeyDown = e => {
+    if (e.key === 'Enter') {
+      setIsEditing(false);
+      setSearchQuery('');
+    }
+  };
+
+  if (loading) {
+    return <div className="text-center py-4">Đang tải dữ liệu...</div>;
+  }
+
+  if (!currentGroup) {
+    return <div className="text-center py-4">Vui lòng chọn nhóm</div>;
+  }
   return (
     <div className="min-h-screen px-8 py-8 bg-gradient-to-br from-white via-blue-50 to-blue-100 font-sans text-sm text-gray-700">
       <div className="px-8 py-4">
         <h1 className="text-4xl font-regular mb-4">Bảng tổng kết điểm</h1>
         <div className="flex items-center mb-4">
-        {isEditing ? (
-          <input
-            ref={inputRef}
-            type="text"
-            value={groupName}
-            onChange={(e) => setGroupName(e.target.value)}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
-            className="text-2xl font-bold focus:outline-none"
-          />
-        ) : (
-          <h2 
-            className="text-2xl font-bold cursor-pointer"
-            onDoubleClick={handleDoubleClick}
+          {currentGroup ? (
+            isEditing ? (
+              <div className="relative w-full max-w-md">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onBlur={handleBlur}
+                  onKeyDown={handleKeyDown}
+                  className="text-2xl font-bold focus:outline-none border-b-2 border-blue-500 w-full p-2"
+                  placeholder="Tìm kiếm nhóm..."
+                />
+
+                {/* Dropdown gợi ý tìm kiếm */}
+                {searchQuery && filteredGroups.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    {filteredGroups.map(group => (
+                      <div
+                        key={group.group_id}
+                        className="p-3 hover:bg-blue-50 cursor-pointer flex items-center"
+                        onMouseDown={() => handleGroupSelect(group)} // Sử dụng onMouseDown thay vì onClick
+                      >
+                        <span className="mr-2">🏢</span>
+                        <span>{group.group_name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {searchQuery && filteredGroups.length === 0 && (
+                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg p-3 text-gray-500">
+                    Không tìm thấy nhóm phù hợp
+                  </div>
+                )}
+              </div>
+            ) : (
+              <h2
+                className="text-2xl font-bold cursor-pointer hover:text-blue-600 transition-colors"
+                onDoubleClick={handleDoubleClick}
+              >
+                {currentGroup.group_name}
+              </h2>
+            )
+          ) : (
+            <p className="text-gray-500">Đang tải thông tin nhóm...</p>
+          )}
+          <button
+            onClick={() => setShowAddGroupPopup(true)}
+            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            title="Thêm nhóm mới"
           >
-            {groupName}
-          </h2>
-        )}
-         <button
-        onClick={() => setShowAddGroupPopup(true)}
-        className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-        title="Thêm nhóm mới"
-      >
-        <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-        </svg>
-      </button>
-      </div>
-      
+            <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+          </button>
+        </div>
+
 
         <div className="flex items-center gap-3 mb-6 ">
           <span className="text-sm font-medium text-gray-600">Chốt từ</span>
@@ -284,7 +369,7 @@ export default function HomePage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-blue-50">
               <tr>
-                {['Tên Zalo', 'Điểm', '$$'].map((header, idx) => (
+                {['Tên Zalo', 'Điểm', '$$', 'GD'].map((header, idx) => (
                   <th
                     key={idx}
                     className="px-4 py-3 text-xs font-medium text-gray-700 uppercase tracking-wider hover:bg-blue-100 transition-colors duration-150 cursor-pointer"
@@ -316,37 +401,43 @@ export default function HomePage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {people.map((person, idx) => (
+              {sortedData.map((member, idx) => (
                 <tr
-                  onClick={() => setShowPopup(true)}
+                  onClick={() => {
+                    setShowPopup(true);
+                    setSelectedUserId(member.userId);
+                  }}
                   key={idx}
-                  className={`transition-colors duration-150 ${person.selected
-                    ? 'bg-gray-50 hover:bg-gray-100'
-                    : 'hover:bg-blue-50'
-                    }`}
+                  className="hover:bg-blue-50 transition-colors duration-150"
                 >
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-3">
                       <img
-                        src={person.avatar}
-                        alt={person.name}
+                        src={member.avatar}
+                        alt={member.name}
                         className="w-8 h-8 rounded-full object-cover border border-gray-200"
                       />
                       <span className="text-sm font-medium text-gray-900">
-                        {person.name}
+                        {member.zalo_name}
                       </span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-medium">
-                    {person.lifecycle}
+                  <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${member.totalPoints >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                    {member.totalPoints}
+                  </td>
+                  <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${member.totalAmount >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                    {member.totalAmount.toLocaleString('vi-VN')}đ
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                    {person.salary}
+                    {member.transactions}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+
         </div>
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
           <div className="text-sm text-gray-600">
@@ -380,7 +471,7 @@ export default function HomePage() {
           </div>
         </div>
       </div>
-       {showPopup && (
+      {showPopup && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50">
           <div className="bg-white p-4 rounded shadow-lg relative">
             <button
@@ -389,7 +480,10 @@ export default function HomePage() {
             >
               &times;
             </button>
-            <TransactionHistory />
+            <TransactionHistory
+              groupId={currentGroup?.group_id}
+              userId={selectedUserId}
+            />
           </div>
         </div>
       )}
@@ -406,11 +500,11 @@ export default function HomePage() {
           </div>
         </div>
       )}
-       {showAddGroupPopup && (
+      {showAddGroupPopup && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h3 className="text-xl font-bold mb-4">Tạo nhóm mới</h3>
-            
+
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">Tên nhóm</label>
               <input
@@ -421,13 +515,13 @@ export default function HomePage() {
                 placeholder="Nhập tên nhóm"
               />
             </div>
-            
+
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">Thành viên</label>
               <div className="border border-gray-300 rounded-md p-2 max-h-60 overflow-y-auto">
                 {availableUsers.map(user => (
-                  <div 
-                    key={user.id} 
+                  <div
+                    key={user.id}
                     className={`flex items-center p-2 rounded cursor-pointer ${selectedUsers.some(u => u.id === user.id) ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
                     onClick={() => toggleUserSelection(user)}
                   >
@@ -448,21 +542,21 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-            
+
             <div className="flex justify-end space-x-3">
-              <button 
+              <button
                 onClick={() => setShowAddGroupPopup(false)}
                 className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
               >
                 Hủy
               </button>
-              <button 
+              {/* <button
                 onClick={handleAddGroup}
                 disabled={!newGroupName.trim()}
                 className={`px-4 py-2 rounded-md text-white ${!newGroupName.trim() ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
               >
                 Tạo nhóm
-              </button>
+              </button> */}
             </div>
           </div>
         </div>

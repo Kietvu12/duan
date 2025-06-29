@@ -1,27 +1,35 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
 import { useProject } from '../../Context/ProjectContext';
 import ChangePasswordModal from '../../Component/ChangePasswordModal';
+
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const { login } = useProject();
+  
+  const { login, loading: contextLoading, error: contextError } = useProject();
   const navigate = useNavigate();
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
-    const result = await login(email, password);
-    if (result.success) {
-      navigate('/');
-    } else {
-      setError(result.error);
+    try {
+      const user = await login(email, password);
+      if (user) {
+        navigate('/');
+      }
+    } catch (err) {
+      setError(err.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.');
+    } finally {
+      setLoading(false);
     }
   };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-blue-50 to-blue-50 p-4">
       <div className="w-full max-w-md">
@@ -48,6 +56,13 @@ const Login = () => {
               <p className="mt-2 text-gray-500">Đăng nhập để tiếp tục</p>
             </div>
 
+            {/* Error Message */}
+            {(error || contextError) && (
+              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
+                {error || contextError}
+              </div>
+            )}
+
             {/* Form */}
             <form className="space-y-5" onSubmit={handleLogin}>
               {/* Email Field */}
@@ -60,6 +75,7 @@ const Login = () => {
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full px-4 py-3 bg-white/70 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-300 focus:border-blue-300 outline-none transition-all duration-200 placeholder-gray-400"
                     placeholder="your@email.com"
+                    required
                   />
                   <div className="absolute right-3 top-3.5 text-gray-400">
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -80,12 +96,9 @@ const Login = () => {
                     type="password"
                     className="w-full px-4 py-3 bg-white/70 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-300 focus:border-blue-300 outline-none transition-all duration-200 placeholder-gray-400"
                     placeholder="••••••••"
+                    required
+                    minLength={6}
                   />
-                  {error && (
-                    <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
-                      {error}
-                    </div>
-                  )}
                   <div className="absolute right-3 top-3.5 text-gray-400">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -107,38 +120,60 @@ const Login = () => {
                     Ghi nhớ đăng nhập
                   </label>
                 </div>
-                <a href="#" className="text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors">
+                <button 
+                  type="button" 
+                  onClick={() => setShowPasswordModal(true)}
+                  className="text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors"
+                >
                   Quên mật khẩu?
-                </a>
+                </button>
               </div>
 
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-blue-500 text-white font-medium rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                disabled={loading || contextLoading}
+                className={`w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium rounded-lg shadow-md hover:shadow-lg transform transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300 ${
+                  loading || contextLoading ? 'opacity-70 cursor-not-allowed' : 'hover:-translate-y-0.5'
+                }`}
               >
-                Đăng nhập
+                {loading || contextLoading ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Đang đăng nhập...
+                  </span>
+                ) : (
+                  'Đăng nhập'
+                )}
               </button>
             </form>
 
             {/* Footer */}
             <div className="mt-6 text-center text-sm text-gray-500">
               Cá nhân hóa?{" "}
-              <a onClick={() => setShowPasswordModal(true)} className="font-medium text-blue-600 hover:text-blue-500 transition-colors">
+              <button 
+                onClick={() => setShowPasswordModal(true)} 
+                className="font-medium text-blue-600 hover:text-blue-500 transition-colors"
+              >
                 Đổi mật khẩu
-              </a>
+              </button>
             </div>
           </div>
         </div>
       </div>
-           {showPasswordModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <ChangePasswordModal 
-        isOpen={showPasswordModal}
-        onClose={() => setShowPasswordModal(false)}
-      />
-      </div>
-           )}
+
+      {/* Change Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <ChangePasswordModal 
+            isOpen={showPasswordModal}
+            onClose={() => setShowPasswordModal(false)}
+          />
+        </div>
+      )}
     </div>
   );
 };

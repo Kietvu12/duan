@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowRightCircle,
   ArrowLeftCircle,
@@ -6,45 +6,79 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import dayjs from 'dayjs';
+import { useProject } from '../Context/ProjectContext';
 
-// Nhóm giao dịch theo ngày
 const groupByDate = (transactions) => {
   const groups = {};
   transactions.forEach((t) => {
-    const date = dayjs(t.date).format('YYYY-MM-DD');
+    const date = dayjs(t.transaction_date).format('YYYY-MM-DD');
     if (!groups[date]) groups[date] = [];
     groups[date].push(t);
   });
   return groups;
 };
 
-const TransactionHistory = () => {
-  const userName = 'Vũ Kiệt';
-  const initialBalance = 1000;
-
-  const transactions = [
-    { name: 'John Smith', description: 'money for groceries', amount: '- $23', date: '2024-06-24T14:00:00' },
-    { name: 'Amy Rose', description: 'money for gym', amount: '+ $28', date: '2024-06-24T09:30:00' },
-    { name: 'Mega Image', description: 'super market', amount: '+ $45', date: '2024-06-23T18:10:00' },
-    { name: 'Jeff Peterson', description: 'karate lessons', amount: '- $88', date: '2024-06-23T10:15:00' },
-    { name: 'Dana Kinston', description: 'surprise', amount: '+ $100', date: '2024-06-22T11:20:00' },
-    { name: 'Bill Jones', description: 'movie', amount: '- $50', date: '2024-06-22T08:00:00' },
-    { name: 'Linda Ray', description: 'gift', amount: '+ $75', date: '2024-06-21T17:00:00' },
-  ];
-
-  const grouped = groupByDate(transactions);
-  const sortedDates = Object.keys(grouped).sort((a, b) => dayjs(b).unix() - dayjs(a).unix());
+const TransactionHistory = ({ groupId, userId }) => {
+  const { getTransactionsByUser, getUserById, getAllUsers } = useProject();
+  const [transactions, setTransactions] = useState([]);
+  const [filteredTransactions, setFilteredTransactions] = useState([]);
+  const [user, setUser] = useState(null);
+  const [allUsers, setAllUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Pagination
   const itemsPerPage = 2;
-  const totalPages = Math.ceil(sortedDates.length / itemsPerPage);
   const [currentPage, setCurrentPage] = useState(1);
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [userData, transactionsData, usersData] = await Promise.all([
+          getUserById(userId),
+          getTransactionsByUser(userId),
+          getAllUsers()
+        ]);
+        
+        // Lọc giao dịch theo groupId
+        const filtered = transactionsData.filter(t => t.group_id === groupId);
+        
+        setUser(userData);
+        setAllUsers(usersData);
+        setTransactions(transactionsData);
+        setFilteredTransactions(filtered);
+      } catch (err) {
+        setError(err.message || 'Lỗi khi tải dữ liệu giao dịch');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [groupId, userId, getTransactionsByUser, getUserById, getAllUsers]);
+
+  // Hàm lấy tên người dùng từ related_user_id
+  const getRelatedUserName = (relatedUserId) => {
+    if (!relatedUserId) return null;
+    const relatedUser = allUsers.find(u => u.user_id === relatedUserId);
+    return relatedUser?.zalo_name || `User ${relatedUserId}`;
+  };
+
+  const grouped = groupByDate(filteredTransactions);
+  const sortedDates = Object.keys(grouped).sort((a, b) => dayjs(b).unix() - dayjs(a).unix());
+  const totalPages = Math.ceil(sortedDates.length / itemsPerPage);
   const pagedDates = sortedDates.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
+  if (loading) return <div className="text-center py-8">Đang tải lịch sử giao dịch...</div>;
+  if (error) return <div className="text-center py-8 text-red-500">{error}</div>;
+  if (!filteredTransactions.length) return <div className="text-center py-8">Không có giao dịch nào trong nhóm này</div>;
+
+  // Tính toán số dư ban đầu
+  const initialBalance = user ? parseFloat(user.balance) + user.points : 0;
   let runningBalance = initialBalance;
 
   return (
@@ -52,18 +86,22 @@ const TransactionHistory = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-6 border-b pb-4 border-gray-300">
         <h2 className="text-2xl font-bold text-gray-800">Lịch sử giao dịch</h2>
-        <p className="text-lg font-medium text-gray-600">{userName}</p>
+        {user && (
+          <div className="flex items-center gap-2">
+            <p className="text-lg font-medium text-gray-600">
+              {user.zalo_name || `User ${userId}`}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Giao dịch */}
       {pagedDates.map((date) => {
-        const items = grouped[date].sort((a, b) => dayjs(b.date).unix() - dayjs(a.date).unix());
+        const items = grouped[date].sort((a, b) => 
+          dayjs(b.transaction_date).unix() - dayjs(a.transaction_date).unix()
+        );
 
-        const dayTotalChange = items.reduce((sum, t) => {
-          const amount = parseFloat(t.amount.replace(/[^0-9.-]+/g, ''));
-          return sum + amount;
-        }, 0);
-
+        const dayTotalChange = items.reduce((sum, t) => sum + t.points_change, 0);
         const balanceAfter = runningBalance;
         runningBalance -= dayTotalChange;
 
@@ -71,16 +109,28 @@ const TransactionHistory = () => {
           <div key={date} className="mb-8">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-gray-700">
-                Chốt điểm đến {dayjs(items[0].date).format('HH:mm')}, {dayjs(date).format('DD/MM/YYYY')}
+                {dayjs(date).format('DD/MM/YYYY')}
               </h3>
               <span className="text-sm text-gray-500">
-                Số dư: <strong>${balanceAfter.toFixed(2)}</strong>
+                Số dư: <strong>{balanceAfter.toLocaleString('vi-VN')}đ</strong>
               </span>
             </div>
 
-            {/* Dòng giao dịch */}
             {items.map((transaction, index) => {
-              const isPositive = transaction.amount.startsWith('+');
+              const isPositive = transaction.points_change > 0;
+              const amountText = `${isPositive ? '+' : ''}${transaction.points_change} điểm`;
+              const transactionTypeMap = {
+                'nhan_san': 'Nhận sân',
+                'giao_lich': 'Giao lịch',
+                'san_cho': 'Sân cho',
+                'nhan_lich': 'Nhận lịch'
+              };
+
+              const relatedUserName = getRelatedUserName(transaction.related_user_id);
+              const transactionContent = relatedUserName 
+                ? `${transaction.content} (${relatedUserName})`
+                : transaction.content;
+
               return (
                 <div
                   key={index}
@@ -95,16 +145,25 @@ const TransactionHistory = () => {
                       )}
                     </div>
                     <div>
-                      <p className="text-base font-semibold text-gray-900">{transaction.name}</p>
-                      <p className="text-sm text-gray-500">{transaction.description}</p>
+                      <p className="text-base font-semibold text-gray-900">
+                        {transactionTypeMap[transaction.transaction_type] || transaction.transaction_type}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {transactionContent}
+                      </p>
                     </div>
                   </div>
 
                   <div className="text-right min-w-[120px]">
                     <p className={`text-base font-bold ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
-                      {transaction.amount}
+                      {amountText}
                     </p>
-                    <p className="text-sm text-gray-400">{dayjs(transaction.date).format('HH:mm')}</p>
+                    <p className="text-sm text-gray-400">
+                      {dayjs(transaction.transaction_date).format('HH:mm')}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {transaction.amount}đ
+                    </p>
                   </div>
                 </div>
               );
@@ -114,40 +173,39 @@ const TransactionHistory = () => {
       })}
 
       {/* Phân trang */}
-      <div className="flex justify-center items-center gap-2 mt-6">
-        {/* Nút trước */}
-        <button
-          className="p-2 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50"
-          disabled={currentPage === 1}
-          onClick={() => setCurrentPage((prev) => prev - 1)}
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-
-        {/* Các số trang */}
-        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-6">
           <button
-            key={page}
-            onClick={() => setCurrentPage(page)}
-            className={`px-3 py-1 rounded-full text-sm font-medium ${
-              currentPage === page
-                ? 'bg-blue-100 text-blue-700'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
+            className="p-2 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((prev) => prev - 1)}
           >
-            {page}
+            <ChevronLeft className="w-5 h-5" />
           </button>
-        ))}
 
-        {/* Nút sau */}
-        <button
-          className="p-2 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50"
-          disabled={currentPage === totalPages}
-          onClick={() => setCurrentPage((prev) => prev + 1)}
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
-      </div>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            <button
+              key={page}
+              onClick={() => setCurrentPage(page)}
+              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                currentPage === page
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+
+          <button
+            className="p-2 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((prev) => prev + 1)}
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };
