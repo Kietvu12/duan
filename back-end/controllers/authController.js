@@ -66,7 +66,7 @@ const getCurrentUser = async (req, res) => {
 
     res.json({
       id: user.user_id,
-      username: user.username,
+      zaloName: user.zalo_name,
       email: user.email,
       role: user.role,
       points: user.points,

@@ -29,24 +29,25 @@ const AddUserToGroupPopup = ({ groupId, onClose }) => {
     fetchData();
   }, [groupId, getAllUsers, getGroupById]);
 
-  useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredUsers([]);
-    } else {
-      const filtered = allUsers.filter(user => 
-        !groupMembers.some(member => member.user_id === user.user_id) && // Chỉ hiển thị user chưa có trong nhóm
-        (user.zalo_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (user.email.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-      setFilteredUsers(filtered);
-    }
-  }, [searchQuery, allUsers, groupMembers]);
+ useEffect(() => {
+  if (searchQuery.trim() === '') {
+    setFilteredUsers([]);
+  } else {
+    const filtered = allUsers.filter(user => 
+      !groupMembers.some(member => member.user_id === user.user_id) && 
+      (user.zalo_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+    
+    setFilteredUsers(filtered);
+  }
+}, [searchQuery, allUsers, groupMembers]);
+
 
   const handleAddUser = async (userId) => {
     try {
       setLoading(true);
       await addUserToGroup(groupId, userId);
-      // Cập nhật lại danh sách thành viên sau khi thêm
       const group = await getGroupById(groupId);
       setGroupMembers(group.members || []);
       setSearchQuery('');
@@ -132,3 +133,5 @@ const AddUserToGroupPopup = ({ groupId, onClose }) => {
     </div>
   );
 };
+
+export default AddUserToGroupPopup

@@ -5,12 +5,41 @@ const AuditLog = require('../models/AuditLog');
 
 const getAllUsers = async (req, res) => {
   try {
-    if (req.user.role !== 'system_admin') {
-      return res.status(403).json({ message: 'Unauthorized' });
+    // System admin có quyền xem tất cả
+    if (req.user.role === 'system_admin') {
+      const users = await User.getAll();
+      return res.json(users);
     }
 
-    const users = await User.getAll();
-    res.json(users);
+    // Group admin chỉ xem được user trong nhóm mình quản lý
+    if (req.user.role === 'group_admin') {
+      // Lấy tất cả nhóm mà user này là admi
+      const managedGroups = await UserGroup.getGroupsByAdmin(req.user.userId);
+      
+      // Lấy tất cả user từ các nhóm đó
+      const groupUsers = await Promise.all(
+        managedGroups.map(group => 
+          UserGroup.getGroupMembers(group.group_id)
+        )
+      );
+      
+      // Gộp và loại bỏ trùng lặp
+      const uniqueUsers = [];
+      const userIds = new Set();
+      
+      groupUsers.flat().forEach(user => {
+        if (!userIds.has(user.user_id)) {
+          userIds.add(user.user_id);
+          uniqueUsers.push(user);
+        }
+      });
+      
+      return res.json(uniqueUsers);
+    }
+
+    // Nếu không phải system_admin hay group_admin
+    return res.status(403).json({ message: 'Unauthorized' });
+    
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -25,7 +54,7 @@ const getUserById = async (req, res) => {
     }
 
     // Only system admin or the user themselves can view the profile
-    if (req.user.role !== 'system_admin' && req.user.userId !== user.user_id) {
+    if (req.user.role !== 'system_admin' && req.user.role !== 'group_admin' && req.user.userId !== user.user_id) {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 

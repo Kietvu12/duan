@@ -6,6 +6,12 @@ const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const groupRoutes = require('./routes/groupRoutes');
 const transactionRoutes = require('./routes/transactionRoutes');
+// app.js hoặc server.js
+require('./controllers/reportController'); 
+
+// Nếu có API trigger thủ công
+const reportRoutes = require('./routes/reportRoutes');
+
 
 const app = express();
 
@@ -19,7 +25,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/transactions', transactionRoutes);
-
+app.use('/api/reports', reportRoutes);
 // Error handling
 app.use((err, req, res, next) => {
   console.error(err.stack);

@@ -4,7 +4,12 @@ const authMiddleware = require('../middleware/authMiddleware');
 const roleMiddleware = require('../middleware/roleMiddleware');
 const userController = require('../controllers/userController');
 
-router.get('/', authMiddleware, roleMiddleware('system_admin'), userController.getAllUsers);
+
+router.get('/', 
+  authMiddleware, 
+  roleMiddleware('system_admin', 'group_admin'), 
+  userController.getAllUsers
+);
 router.get('/:id', authMiddleware, userController.getUserById);
 router.post('/', authMiddleware, roleMiddleware('system_admin'), userController.createUser);
 router.put('/:id', authMiddleware, userController.updateUser);

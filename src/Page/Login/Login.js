@@ -120,13 +120,6 @@ const Login = () => {
                     Ghi nhớ đăng nhập
                   </label>
                 </div>
-                <button 
-                  type="button" 
-                  onClick={() => setShowPasswordModal(true)}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors"
-                >
-                  Quên mật khẩu?
-                </button>
               </div>
 
               {/* Submit Button */}
@@ -152,15 +145,18 @@ const Login = () => {
             </form>
 
             {/* Footer */}
-            <div className="mt-6 text-center text-sm text-gray-500">
-              Cá nhân hóa?{" "}
-              <button 
-                onClick={() => setShowPasswordModal(true)} 
-                className="font-medium text-blue-600 hover:text-blue-500 transition-colors"
-              >
-                Đổi mật khẩu
-              </button>
-            </div>
+        <div className="mt-6 text-center">
+  <p className="text-sm text-gray-600">
+    Chưa có tài khoản?{' '}
+    <button
+      type="button"
+      onClick={() => navigate('/register')}
+      className="text-blue-600 hover:text-blue-700 font-medium"
+    >
+      Đăng ký ngay
+    </button>
+  </p>
+</div>
           </div>
         </div>
       </div>
@@ -175,6 +171,7 @@ const Login = () => {
         </div>
       )}
     </div>
+
   );
 };
 

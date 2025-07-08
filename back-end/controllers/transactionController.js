@@ -10,7 +10,7 @@ const createTransaction = async (req, res) => {
       transaction_date,
       points_change,
       transaction_type,
-      related_user_id,
+      related_user,
       amount,
       content
     } = req.body;
@@ -47,7 +47,7 @@ const createTransaction = async (req, res) => {
       transaction_date: transaction_date || new Date(),
       points_change,
       transaction_type,
-      related_user_id,
+      related_user,
       amount,
       content,
       created_by: req.user.userId
@@ -87,8 +87,6 @@ const getTransactionsByUser = async (req, res) => {
         if (!isGroupAdmin) {
           return res.status(403).json({ message: 'Unauthorized' });
         }
-      } else {
-        return res.status(403).json({ message: 'Unauthorized' });
       }
     }
 
@@ -113,7 +111,7 @@ const getTransactionsByGroup = async (req, res) => {
     }
 
     // Regular users can only see their own transactions in the group
-    if (req.user.role === 'user' && !isGroupAdmin) {
+    if (req.user.role !== 'system_admin' && !isGroupAdmin) {
       const transactions = await Transaction.getByUserId(req.user.userId, groupId);
       return res.json(transactions);
     }

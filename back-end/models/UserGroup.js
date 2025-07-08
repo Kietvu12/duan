@@ -28,7 +28,28 @@ class UserGroup {
     );
     return rows;
   }
-
+static async getGroupsByAdmin(userId) {
+  // Lấy tất cả group_id mà user là admin
+  const [groupRows] = await db.query(
+    `SELECT group_id FROM user_groups 
+     WHERE user_id = ? AND is_group_admin = 1`,
+    [userId]
+  );
+  
+  // Nếu không có nhóm nào
+  if (!groupRows.length) return [];
+  
+  // Lấy danh sách các group_id
+  const groupIds = groupRows.map(row => row.group_id);
+  
+  // Lấy thông tin đầy đủ của các nhóm
+  const [groups] = await db.query(
+    `SELECT * FROM groups WHERE group_id IN (?)`,
+    [groupIds]
+  );
+  
+  return groups;
+}
   static async updateAdminStatus(userId, groupId, isGroupAdmin) {
     await db.query(
       'UPDATE user_groups SET is_group_admin = ? WHERE user_id = ? AND group_id = ?',

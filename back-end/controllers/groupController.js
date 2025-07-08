@@ -93,7 +93,7 @@ const removeUserFromGroup = async (req, res) => {
     if (userId === requesterId) {
       const groupAdmins = (await UserGroup.getGroupMembers(groupId))
         .filter(member => member.is_group_admin);
-      
+
       if (groupAdmins.length === 1) {
         return res.status(400).json({ message: 'Cannot remove the only group admin' });
       }
@@ -121,37 +121,73 @@ const updateGroupAdminStatus = async (req, res) => {
     const { groupId, userId, isGroupAdmin } = req.body;
     const requesterId = req.user.userId;
 
-    // Only system admin or group admin can change admin status
+    // Chỉ system admin hoặc group admin của nhóm này mới có quyền thay đổi
     const isRequesterGroupAdmin = await UserGroup.isGroupAdmin(requesterId, groupId);
     if (req.user.role !== 'system_admin' && !isRequesterGroupAdmin) {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
+    // Thực hiện cập nhật trạng thái admin trong nhóm
     await UserGroup.updateAdminStatus(userId, groupId, isGroupAdmin);
 
+    // Kiểm tra xem user có là admin của bất kỳ nhóm nào không
+    const userGroups = await UserGroup.getUserGroups(userId);
+    const isAdminInAnyGroup = userGroups.some(group => group.is_group_admin);
+
+    // Cập nhật role chính của user
+    let newRole = 'user';
+    if (isAdminInAnyGroup) {
+      newRole = 'group_admin';
+    }
+
+    // Nếu role hiện tại khác với role mới thì cập nhật
+    const user = await User.findById(userId);
+    if (user.role !== newRole) {
+      await User.update(userId, { role: newRole });
+    }
+
+    // Ghi log
     await AuditLog.create({
       user_id: requesterId,
       action: 'update_group_admin',
       table_affected: 'user_groups',
       record_id: userId,
-      new_values: JSON.stringify({ groupId, isGroupAdmin })
+      new_values: JSON.stringify({ 
+        groupId, 
+        isGroupAdmin,
+        updated_role: newRole 
+      })
     });
 
-    res.json({ message: 'Group admin status updated successfully' });
+    res.json({ 
+      success: true,
+      message: 'Group admin status updated successfully',
+      user_role_updated: newRole !== user.role,
+      new_role: newRole
+    });
+
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error updating group admin status:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error',
+      error: error.message 
+    });
   }
 };
 const getAllGroups = async (req, res) => {
   try {
     let groups;
-    
+    const isAccountPage = req.headers['x-request-page'] === 'account-management';
+
     if (req.user.role === 'system_admin') {
-      // System admin can see all groups
       groups = await Group.getAll();
-    } else {
-      // Regular users can only see groups they belong to
+    } 
+    else if (req.user.role === 'group_admin' && isAccountPage) {
+      // Chỉ lấy nhóm mà user là admin khi ở trang account management
+      groups = await UserGroup.getGroupsByAdmin(req.user.userId);
+    }
+    else{      
       groups = await UserGroup.getUserGroups(req.user.userId);
     }
 

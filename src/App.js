@@ -6,6 +6,9 @@ import Navbar from './Component/Navbar';
 import AccountManage from './Page/AccountManage/AccountManage';
 import InputForm from './Page/InputForm/InputForm';
 import { ProjectProvider, useProject } from './Context/ProjectContext';
+import axios from 'axios';
+import Register from './Page/Register/Register';
+
 
 // ProtectedRoute component to handle authentication
 const ProtectedRoute = ({ children, requiredRole = null }) => {
@@ -17,35 +20,40 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
   });
 
   useEffect(() => {
-    let isMounted = true;
-    
-    const checkAuth = async () => {
-      try {
-        const user = await getCurrentUser();
-        if (isMounted) {
-          setAuthState({
-            loading: false,
-            isAuthenticated: true,
-            userRole: user.role
-          });
+  let isMounted = true;
+
+  const checkAuth = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/api/auth/me', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          'Cache-Control': 'no-cache'
         }
-      } catch (err) {
-        if (isMounted) {
-          setAuthState({
-            loading: false,
-            isAuthenticated: false,
-            userRole: null
-          });
-        }
+      });
+      if (isMounted) {
+        setAuthState({
+          loading: false,
+          isAuthenticated: true,
+          userRole: response.data.role
+        });
       }
-    };
-    
-    checkAuth();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [getCurrentUser]); // Thêm dependency
+    } catch (err) {
+      if (isMounted) {
+        setAuthState({
+          loading: false,
+          isAuthenticated: false,
+          userRole: null
+        });
+      }
+    }
+  };
+
+  checkAuth();
+
+  return () => {
+    isMounted = false;
+  };
+}, []);
 
   if (authState.loading) {
     return <div>Loading...</div>;
@@ -73,7 +81,12 @@ const AdminRoute = ({ children }) => (
 );
 
 const GroupAdminRoute = ({ children }) => (
-  <ProtectedRoute requiredRole={['system_admin', 'group_admin']}>
+  <ProtectedRoute requiredRole={['system_admin', 'group_admin', 'user']}>
+    {children}
+  </ProtectedRoute>
+);
+const GroupAdminUserRoute = ({ children }) => (
+  <ProtectedRoute requiredRole={['system_admin', 'group_admin', 'user']}>
     {children}
   </ProtectedRoute>
 );
@@ -92,6 +105,7 @@ function App() {
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         
         {/* Protected routes */}
         <Route path="/" element={
@@ -103,21 +117,20 @@ function App() {
         
         {/* Admin-only routes */}
         <Route path="/account" element={
-          <AdminRoute>
+          <GroupAdminRoute>
             <Navbar />
             <AccountManage />
-          </AdminRoute>
+          </GroupAdminRoute>
         } />
         
         {/* Group admin or system admin routes */}
         <Route path="/input" element={
-          <GroupAdminRoute>
+          <GroupAdminUserRoute>
             <Navbar />
             <InputForm />
-          </GroupAdminRoute>
+          </GroupAdminUserRoute>
         } />
         
-        {/* Catch-all route */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

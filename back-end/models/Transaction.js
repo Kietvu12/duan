@@ -8,16 +8,16 @@ class Transaction {
     transaction_date,
     points_change,
     transaction_type,
-    related_user_id,
+    related_user,
     amount,
     content,
     created_by
   }) {
     const [result] = await db.query(
       `INSERT INTO transactions 
-      (user_id, group_id, transaction_date, points_change, transaction_type, related_user_id, amount, content, created_by) 
+      (user_id, group_id, transaction_date, points_change, transaction_type, related_user, amount, content, created_by) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [user_id, group_id, transaction_date, points_change, transaction_type, related_user_id, amount, content, created_by]
+      [user_id, group_id, transaction_date, points_change, transaction_type, related_user, amount, content, created_by]
     );
 
     // Update user's points and balance based on transaction type

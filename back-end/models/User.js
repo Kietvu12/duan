@@ -26,7 +26,13 @@ class User {
     
     await db.query(`UPDATE users SET ${setClause} WHERE user_id = ?`, values);
   }
-
+static async create({ username, zalo_name, email, password_hash, role = 'user', points = 0, balance = 0 }) {
+  const [result] = await db.query(
+    'INSERT INTO users (username, zalo_name, email, password_hash, role, points, balance, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())',
+    [username, zalo_name, email, password_hash, role, points, balance]
+  );
+  return result.insertId;
+}
   static async delete(id) {
     await db.query('DELETE FROM users WHERE user_id = ?', [id]);
   }

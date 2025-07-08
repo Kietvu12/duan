@@ -23,47 +23,38 @@ const TransactionHistory = ({ groupId, userId }) => {
   const [transactions, setTransactions] = useState([]);
   const [filteredTransactions, setFilteredTransactions] = useState([]);
   const [user, setUser] = useState(null);
-  const [allUsers, setAllUsers] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Pagination
   const itemsPerPage = 2;
   const [currentPage, setCurrentPage] = useState(1);
-
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [userData, transactionsData, usersData] = await Promise.all([
-          getUserById(userId),
-          getTransactionsByUser(userId),
-          getAllUsers()
-        ]);
-        
-        // Lọc giao dịch theo groupId
-        const filtered = transactionsData.filter(t => t.group_id === groupId);
-        
-        setUser(userData);
-        setAllUsers(usersData);
-        setTransactions(transactionsData);
-        setFilteredTransactions(filtered);
-      } catch (err) {
-        setError(err.message || 'Lỗi khi tải dữ liệu giao dịch');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [groupId, userId, getTransactionsByUser, getUserById, getAllUsers]);
-
-  // Hàm lấy tên người dùng từ related_user_id
-  const getRelatedUserName = (relatedUserId) => {
-    if (!relatedUserId) return null;
-    const relatedUser = allUsers.find(u => u.user_id === relatedUserId);
-    return relatedUser?.zalo_name || `User ${relatedUserId}`;
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const [userData, transactionsData] = await Promise.all([
+        getUserById(userId),
+        getTransactionsByUser(userId, groupId),
+      ]);
+      
+      setUser(userData);
+      setTransactions(transactionsData);
+      setFilteredTransactions(transactionsData.filter(t => t.group_id === groupId));
+    } catch (err) {
+      setError(err.message || 'Lỗi khi tải dữ liệu');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  fetchData();
+}, [groupId, userId]);
+
+
 
   const grouped = groupByDate(filteredTransactions);
   const sortedDates = Object.keys(grouped).sort((a, b) => dayjs(b).unix() - dayjs(a).unix());
@@ -126,7 +117,7 @@ const TransactionHistory = ({ groupId, userId }) => {
                 'nhan_lich': 'Nhận lịch'
               };
 
-              const relatedUserName = getRelatedUserName(transaction.related_user_id);
+              const relatedUserName = transaction.related_user;
               const transactionContent = relatedUserName 
                 ? `${transaction.content} (${relatedUserName})`
                 : transaction.content;
@@ -162,7 +153,7 @@ const TransactionHistory = ({ groupId, userId }) => {
                       {dayjs(transaction.transaction_date).format('HH:mm')}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {transaction.amount}đ
+                      {transaction.amount}$
                     </p>
                   </div>
                 </div>
